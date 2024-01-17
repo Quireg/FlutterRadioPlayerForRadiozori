@@ -1,4 +1,4 @@
-package ua.zori.radiozori22;
+package ua.zori;
 
 import android.content.Context;
 import com.google.android.gms.cast.framework.CastOptions;

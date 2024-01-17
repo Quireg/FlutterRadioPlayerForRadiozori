@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:radiozori22/screen/size_extension.dart';
+import 'package:Radiozori/screen/size_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'themes/colors.dart';

@@ -1,4 +1,4 @@
-package ua.zori.radiozori22
+package ua.zori
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 import androidx.annotation.NonNull;

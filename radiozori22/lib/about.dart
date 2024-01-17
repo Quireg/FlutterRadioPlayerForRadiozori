@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:radiozori22/screen/size_extension.dart';
+import 'package:Radiozori/screen/size_extension.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'themes/colors.dart';
@@ -95,6 +95,18 @@ class About extends StatelessWidget {
                   ),
                 ),
               ),
+              Padding(
+                padding: EdgeInsets.only(top: 6.h),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    text: 'https://quireg.github.io\n',
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => openQ(),
+                    style: textHeading,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -118,6 +130,13 @@ class About extends StatelessWidget {
 
   openFB2() async {
     final Uri url = Uri.parse('https://www.facebook.com/groups/radiozori');
+    if (!await launchUrl(url)) {
+      throw Exception('Could not launch $url');
+    }
+  }
+
+  openQ() async {
+    final Uri url = Uri.parse('https://quireg.github.io');
     if (!await launchUrl(url)) {
       throw Exception('Could not launch $url');
     }
