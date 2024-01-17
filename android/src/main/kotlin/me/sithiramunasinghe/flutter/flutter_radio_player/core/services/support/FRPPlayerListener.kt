@@ -48,12 +48,22 @@ class FRPPlayerListener(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         Log.i(TAG, " :::: isPlaying status changed :::: ")
         if (isPlaying) {
-            eventBus.post(FRPPlayerEvent(playbackStatus = FRP_PLAYING))
-            FRPPlaybackStatus.PLAYING
+            frpCoreService.playbackStatus = FRP_PLAYING
+            frpCoreService.currentMetaData?.let {
+                eventBus.post(FRPPlayerEvent(icyMetaDetails = it.title.toString(), playbackStatus = frpCoreService.playbackStatus))
+            } ?: kotlin.run {
+                eventBus.post(FRPPlayerEvent(playbackStatus = frpCoreService.playbackStatus))
+            }
+            FRP_PLAYING
         } else {
-            if (frpCoreService.playbackStatus != FRPPlaybackStatus.STOPPED) {
-                eventBus.post(FRPPlayerEvent(playbackStatus = FRP_PAUSED))
-                FRPPlaybackStatus.PAUSED
+            if (frpCoreService.playbackStatus != FRP_STOPPED) {
+                frpCoreService.playbackStatus = FRP_PAUSED
+                frpCoreService.currentMetaData?.let {
+                    eventBus.post(FRPPlayerEvent(icyMetaDetails = it.title.toString(), playbackStatus = frpCoreService.playbackStatus))
+                } ?: kotlin.run {
+                    eventBus.post(FRPPlayerEvent(playbackStatus = frpCoreService.playbackStatus))
+                }
+                FRP_PAUSED
             }
         }
     }
@@ -63,7 +73,7 @@ class FRPPlayerListener(
         frpCoreService.playbackStatus = when (playbackState) {
             Player.STATE_BUFFERING -> {
                 eventBus.post(FRPPlayerEvent(playbackStatus = FRP_LOADING))
-                FRPPlaybackStatus.LOADING
+                FRP_LOADING
             }
             Player.STATE_IDLE -> {
                 frpCoreService.stopForeground(true)
@@ -71,15 +81,25 @@ class FRPPlayerListener(
                 frpCoreService.stopSelf()
                 frpCoreService.onDestroy()
                 eventBus.post(FRPPlayerEvent(playbackStatus = FRP_STOPPED))
-                FRPPlaybackStatus.STOPPED
+                FRP_STOPPED
             }
             Player.STATE_READY -> {
                 if (exoPlayer!!.playWhenReady) {
-                    eventBus.post(FRPPlayerEvent(playbackStatus = FRP_PLAYING))
-                    FRPPlaybackStatus.PLAYING
+                    frpCoreService.playbackStatus = FRP_PLAYING
+                    frpCoreService.currentMetaData?.let {
+                        eventBus.post(FRPPlayerEvent(icyMetaDetails = it.title.toString(), playbackStatus = frpCoreService.playbackStatus))
+                    } ?: kotlin.run {
+                        eventBus.post(FRPPlayerEvent(playbackStatus = frpCoreService.playbackStatus))
+                    }
+                    FRP_PLAYING
                 } else {
-                    eventBus.post(FRPPlayerEvent(playbackStatus = FRP_PAUSED))
-                    FRPPlaybackStatus.PAUSED
+                    frpCoreService.playbackStatus = FRP_PAUSED
+                    frpCoreService.currentMetaData?.let {
+                        eventBus.post(FRPPlayerEvent(icyMetaDetails = it.title.toString(), playbackStatus = frpCoreService.playbackStatus))
+                    } ?: kotlin.run {
+                        eventBus.post(FRPPlayerEvent(playbackStatus = frpCoreService.playbackStatus))
+                    }
+                    FRP_PAUSED
                 }
             }
             else -> {
@@ -87,7 +107,7 @@ class FRPPlayerListener(
                 frpCoreService.stopForeground(true)
                 Log.i(TAG, "Notification Removed")
                 frpCoreService.stopSelf()
-                FRPPlaybackStatus.STOPPED
+                FRP_STOPPED
             }
         }
         Log.i(TAG, "Current PlayBackStatus = ${frpCoreService.playbackStatus}")
@@ -95,7 +115,7 @@ class FRPPlayerListener(
 
     override fun onPlayerError(error: PlaybackException) {
         eventBus.post(FRPPlayerEvent(playbackStatus = FRP_STOPPED))
-        frpCoreService.playbackStatus = FRPPlaybackStatus.ERROR
+        frpCoreService.playbackStatus = FRP_STOPPED
         Log.e(TAG, error.message!!)
     }
 }

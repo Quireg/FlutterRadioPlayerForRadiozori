@@ -17,6 +17,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import me.sithiramunasinghe.flutter.flutter_radio_player.core.data.FRPAudioSource
 import me.sithiramunasinghe.flutter.flutter_radio_player.core.data.FRP_STOPPED
+import me.sithiramunasinghe.flutter.flutter_radio_player.core.data.FRP_PLAYING
 import me.sithiramunasinghe.flutter.flutter_radio_player.core.events.FRPPlayerEvent
 import me.sithiramunasinghe.flutter.flutter_radio_player.core.exceptions.FRPException
 import me.sithiramunasinghe.flutter.flutter_radio_player.core.services.FRPCoreService
@@ -45,13 +46,27 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
     private var flutterPluginBinding: FlutterPlugin.FlutterPluginBinding? = null
 
     private lateinit var frpRadioPlayerService: FRPCoreService
+    private val unFRPEvents = mutableListOf<FRPPlayerEvent>()
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        Log.i(TAG, ":::: onAttachedToEngine ::::: ")
         this.flutterPluginBinding = flutterPluginBinding
+        EventBus.getDefault().register(this)
+        startFRPService()
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        Log.i(TAG, "::: Detaching FRP from FlutterEngine :::")
+        Log.i(TAG, "::: onDetachedFromEngine :::")
+        unFRPEvents.clear()
+        if (frpRadioPlayerService.playbackStatus != FRP_PLAYING) {
+            frpRadioPlayerService.onDestroy()
+        }
+        EventBus.getDefault().unregister(this)
+        kotlin.runCatching {
+            context!!.unbindService(serviceConnection!!)
+            isBound = false
+        }
+
         this.context = null
         frpChannel?.setMethodCallHandler(null)
         frpChannel = null
@@ -62,23 +77,22 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
 //        val lifecycle: Lifecycle = FlutterLifecycleAdapter.getActivityLifecycle(binding)
         Log.i(TAG, ":::: onAttachedToActivity ::::: ")
-        EventBus.getDefault().register(this)
+//        EventBus.getDefault().register(this)
         pluginActivity = binding.activity
-        startFRPService()
+//        startFRPService()
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
-
+        Log.i(TAG, ":::: onDetachedFromActivityForConfigChanges ::::: ")
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        Log.i(TAG, ":::: onReattachedToActivityForConfigChanges ::::: ")
     }
 
     override fun onDetachedFromActivity() {
-        if (isBound) {
-            frpRadioPlayerService.onDestroy()
-        }
-        EventBus.getDefault().unregister(this)
+        Log.i(TAG, ":::: onDetachedFromActivity ::::: ")
+
     }
 
     private fun onAttachedToEngine(context: Context, binaryMessenger: BinaryMessenger) {
@@ -92,18 +106,37 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 Log.i(TAG, "EventChannel sink ok")
                 eventSink = events
+                if (unFRPEvents.isNotEmpty()) {
+                    synchronized(unFRPEvents) {
+                        for (i in 0 until unFRPEvents.size) {
+                            Log.d(TAG, "FRP Event data = ${unFRPEvents[i]}")
+                            if (unFRPEvents[i].playbackStatus != null) {
+                                if (unFRPEvents[i].playbackStatus == FRP_STOPPED) {
+                                    Log.i(TAG, "Service unbind....")
+                                    isBound = false
+                                    context.unbindService(serviceConnection!!)
+                                }
+                            }
+                            eventSink?.success(GSON.toJson(unFRPEvents[i]))
+                        }
+                        unFRPEvents.clear()
+                    }
+                }
             }
 
             override fun onCancel(arguments: Any?) {
                 Log.i(TAG, "EventChannel sink null")
             }
         })
+        startAndBindService()
+    }
 
+    private fun startAndBindService() {
         // service intent
         serviceIntent = Intent(context, FRPCoreService::class.java)
 
         // start the background service.
-        pluginActivity?.startService(serviceIntent)
+        context?.startService(serviceIntent)
 
         // bind and get the service connection
         serviceConnection = object : ServiceConnection {
@@ -122,7 +155,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
             }
         }
 
-        context.bindService(serviceIntent, serviceConnection!!, Context.BIND_AUTO_CREATE)
+        context?.bindService(serviceIntent!!, serviceConnection!!, Context.BIND_AUTO_CREATE)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -139,6 +172,9 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
             eventSink?.success(GSON.toJson(event))
         } else {
             Log.i(TAG, "EventSink null")
+            synchronized(unFRPEvents) {
+                unFRPEvents.add(event)
+            }
         }
     }
 
@@ -161,6 +197,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 startFRPService()
                 result.success("success")
             }
+
             "use_icy_data" -> {
                 if (!isBound) {
                     result.error("FRP_002", "Failed to call use_icy_data", null)
@@ -169,6 +206,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.useIcyData(status = true)
                 result.success("success")
             }
+
             "play" -> {
                 if (!isBound) {
                     result.error("FRP_003", "Failed to call play", null)
@@ -177,6 +215,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.play()
                 result.success("success")
             }
+
             "pause" -> {
                 if (!isBound) {
                     result.error("FRP_004", "Failed to call pause", null)
@@ -185,6 +224,16 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.pause()
                 result.success("success")
             }
+
+            "requestUpdate" -> {
+                if (!isBound) {
+                    result.error("FRP_004", "Failed to call requestUpdate", null)
+                    throw FRPException("FRPCoreService has not been initialized yet")
+                }
+                frpRadioPlayerService.requestUpdate()
+                result.success("success")
+            }
+
             "stop" -> {
                 if (!isBound) {
                     result.error("FRP_004", "Failed to call stop", null)
@@ -193,6 +242,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.stop()
                 result.success("success")
             }
+
             "play_or_pause" -> {
                 if (!isBound) {
                     result.error("FRP_005", "Failed to call play_or_pause", null)
@@ -201,6 +251,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.playOrPause()
                 result.success("success")
             }
+
             "next_source" -> {
                 if (!isBound) {
                     result.error("FRP_006", "Failed to call next_source", null)
@@ -209,6 +260,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.nextMediaItem()
                 result.success("success")
             }
+
             "previous_source" -> {
                 if (!isBound) {
                     result.error("FRP_007", "Failed to call previous_source", null)
@@ -217,6 +269,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.prevMediaItem()
                 result.success("success")
             }
+
             "seek_source_to_index" -> {
                 if (!isBound) {
                     result.error("FRP_008", "Failed to call seek_source_to_index", null)
@@ -227,6 +280,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.seekToMediaItem(sourceIndex, playIfReady)
                 result.success("success")
             }
+
             "set_volume" -> {
                 if (!isBound) {
                     result.error("FRP_009", "Failed to call set_volume", null)
@@ -236,6 +290,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 frpRadioPlayerService.setVolume(volume.toFloat())
                 result.success("success")
             }
+
             "set_sources" -> {
                 if (!isBound) {
                     result.error("FRP_010", "Failed to call set_sources", null)
@@ -257,17 +312,19 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
 
                 val mappedSources = mediaSources.map { m -> FRPAudioSource.fromMap(m) }
 
-                frpRadioPlayerService.setMediaSources(mappedSources, true)
+                frpRadioPlayerService.setMediaSources(mappedSources, false)
                 result.success("success")
             }
+
             "get_playback_state" -> {
                 if (!isBound) {
                     result.error("FRP_013", "Failed to call get_playback_state", null)
 
                     throw FRPException("FRPCoreService has not been initialized yet")
                 }
-                result.success(frpRadioPlayerService.getPlayerState().name)
+                result.success(frpRadioPlayerService.getPlayerState())
             }
+
             "get_current_metadata" -> {
                 if (!isBound) {
                     result.error("FRP_014", "Failed to call get_current_metadata", null)
@@ -275,6 +332,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 }
                 result.success(GSON.toJson(frpRadioPlayerService.getMetaData()))
             }
+
             "get_is_playing" -> {
                 if (!isBound) {
                     result.error("FRP_015", "Failed to call get_is_playing", null)
@@ -282,6 +340,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                 }
                 result.success(frpRadioPlayerService.isPlaying())
             }
+
             else -> {
                 result.notImplemented()
             }
