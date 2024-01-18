@@ -2,12 +2,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="me.sithiramunasinghe.flutter.flutter_radio_player">
 
-    <!--  Permissions for the plugin  -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.INTERNET" />
+  <!--  Permissions for the plugin  -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <uses-permission android:name="android.permission.INTERNET" />
 
-    <!--  Services for the plugin  -->
-    <application android:usesCleartextTraffic="true" tools:targetApi="m">
-        <service android:name=".core.services.FRPCoreService"/>
-    </application>
+  <!--  Services for the plugin  -->
+  <application android:usesCleartextTraffic="true">
+    <service
+        android:name=".core.services.FRPCoreService"
+        android:exported="false"
+        android:foregroundServiceType="mediaPlayback" />
+  </application>
 </manifest>

@@ -13,23 +13,23 @@ class _TestPage extends State<TestPage> {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
+      decoration:
+          BoxDecoration(color: Theme.of(context).colorScheme.background),
       child: SnowfallWidget(
           color: Theme.of(context).colorScheme.primary,
           child: Align(
             alignment: Alignment.bottomRight,
-            child: Padding(child: SizedBox(
+            child: Padding(padding: const EdgeInsets.all(12),child: SizedBox(
+              width: 70,
+              height: 30,
               child: TextButton(
                 onPressed: () {
                   Modular.to.pop();
                 },
                 child: const Text('Go back'),
               ),
-              width: 70,
-              height: 30,
-            ), padding: const EdgeInsets.all(12),),
+            ),),
           )),
-      decoration:
-          BoxDecoration(color: Theme.of(context).colorScheme.background),
     );
   }
 }

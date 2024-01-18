@@ -6,15 +6,14 @@ import 'package:flutter_radio_player/models/frp_source_modal.dart';
 
 class FlutterRadioPlayer {
   static const MethodChannel _methodChannel =
-  MethodChannel('flutter_radio_player/method_channel');
+      MethodChannel('flutter_radio_player/method_channel');
 
   static const EventChannel _eventChannel =
-  EventChannel('flutter_radio_player/event_channel');
+      EventChannel('flutter_radio_player/event_channel');
 
   static Stream<String?>? _eventStream;
 
   FlutterRadioPlayer();
-
 
   /// Returns a [Future] of [String] of the players playback events
   Future<String> getPlaybackState() async {
@@ -43,11 +42,14 @@ class FlutterRadioPlayer {
     }
     _eventStream ??=
         _eventChannel.receiveBroadcastStream().map<String>((event) => event);
-    useIcyData(true);
-    addMediaSources(frpSource);
-    if (kDebugMode) {
-      print("Initialized Event Channels: Completed");
-    }
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      useIcyData(true);
+      addMediaSources(frpSource);
+      if (kDebugMode) {
+        print("Initialized Event Channels: Completed");
+      }
+    });
   }
 
   /// Add the media sources to the player.

@@ -79,7 +79,6 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
         Log.i(TAG, ":::: onAttachedToActivity ::::: ")
 //        EventBus.getDefault().register(this)
         pluginActivity = binding.activity
-//        startFRPService()
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -310,7 +309,7 @@ class FlutterRadioPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.Met
                     throw FRPException("Empty media sources")
                 }
 
-                val mappedSources = mediaSources.map { m -> FRPAudioSource.fromMap(m) }
+                val mappedSources = mediaSources!!.map { m -> FRPAudioSource.fromMap(m) }
 
                 frpRadioPlayerService.setMediaSources(mappedSources, false)
                 result.success("success")
