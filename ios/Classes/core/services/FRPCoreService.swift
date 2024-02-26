@@ -47,7 +47,7 @@ class FRPCoreService: NSObject {
         
         // add listeners
         player.event.stateChange.addListener(self, FRPPlayerEventHandler.handleAudioPlayerStateChange)
-        player.event.receiveMetadata.addListener(self, FRPPlayerEventHandler.handleMetaDataChanges)
+//        player.event.receiveMetadata.addListener(self, FRPPlayerEventHandler.handleMetaDataChanges)
         
         audioSession.addObserver(self, forKeyPath: #keyPath(AVAudioSession.outputVolume), options: [.new, .initial], context: nil)
     }
@@ -111,6 +111,15 @@ class FRPCoreService: NSObject {
     func stop() -> Void {
         player.stop()
     }
+    
+    func requestUpdate() -> Void {
+        if (playbackStatus == FRPPlaybackStatus.PLAYING) {
+            FRPNotificationUtil.shared.publish(eventData: FRPPlayerEvent(playbackStatus: FRPConsts.FRP_PLAYING))
+        } else {
+            FRPNotificationUtil.shared.publish(eventData: FRPPlayerEvent(playbackStatus: FRPConsts.FRP_PAUSED))
+        }
+    }
+
     
     func setVolume(volume: Float) -> Float {
         player.volume = volume

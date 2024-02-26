@@ -37,6 +37,12 @@ let frpCoreService: FRPCoreService = FRPCoreService.shared
             return
         }
         
+        if call.method == "requestUpdate" {
+            self.frpCoreService.requestUpdate()
+            result("success")
+            return
+        }
+        
         if call.method == "next_source" {
             self.frpCoreService.next()
             result("success")
